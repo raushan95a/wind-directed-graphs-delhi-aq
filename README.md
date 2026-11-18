@@ -19,6 +19,8 @@ We forecast hourly PM2.5 at 34 stations in Delhi and compare seven ways of build
 2. Using information from neighbouring stations lowers short-range forecast error by 3–9%.
 3. Pointing the graph edges in the wind direction does not help: an ordinary distance-based graph does as well or better.
 
+The accompanying paper (IEEE conference format, 6 pages) reports these results in full.
+
 ---
 
 ## Quick start (Google Colab)
@@ -45,7 +47,7 @@ The notebook installs the requirements, downloads the data, runs all experiments
 | `src/evaluate_stats.py` | Error metrics, significance tests and breakdowns by season, ventilation and transport |
 | `src/gnn_experiment.py` | Robustness check with a graph neural network |
 | `src/resources.py` | Training curves, run time and GPU memory measurements |
-| `tools/make_paper_tables.py` | Turns the results into the tables and figures of the paper |
+| `tools/make_paper_tables.py` | Turns the notebook's results zip into the tables and figures of the paper |
 | `diagrams/` | draw.io source files of the block diagram and flow diagram, their PDF versions (`pdf/`) and the scripts that create them |
 | `data/station_coords.csv` | Latitude and longitude of each station |
 | `results/` | Summary results of the run reported in the paper |
@@ -90,6 +92,20 @@ Results of the reported run are in `results/`. Experiments ran on a Tesla T4 GPU
 | Does following the wind direction help? | No. Across 15 year and horizon combinations, the hourly wind graph is significantly worse than the distance graph in 8 and better in only 1 (by 0.25%). |
 | Does a neural network change the picture? | No. The same pattern holds, and a graph learned from the data performs best. |
 
+**Forecast error in the most recent test year (2025)**
+
+Mean absolute error in µg/m³, XGBoost learner, 34 stations. Lower is better.
+
+| Model | 1 h | 3 h | 6 h | 12 h | 24 h |
+|---|---|---|---|---|---|
+| Persistence (last value) | 15.31 | 30.05 | 42.44 | 50.47 | 37.23 |
+| No graph | 13.64 | 22.32 | 27.30 | 30.60 | 32.11 |
+| Distance graph | 12.86 | 21.17 | 26.74 | 30.64 | 32.10 |
+| Hourly wind graph | 12.91 | 21.34 | 26.85 | 30.56 | 32.21 |
+| Ventilation-gated graph | 12.79 | 21.16 | 26.74 | 30.59 | 32.14 |
+
+The full tables for all seven graphs and all three test years are in `results/test20XX/xgb20XX_overall.csv`.
+
 **Files in `results/`**
 
 | File | Contents |
@@ -130,3 +146,44 @@ python src/evaluate_stats.py out/xgb_test2025/test_predictions.parquet out/xgb_t
 ```
 
 See the notebook for the remaining steps (other test years, GNN, resource measurements).
+
+To rebuild the paper's tables and figures, unzip the `results.zip` that the notebook downloads and run:
+
+```bash
+python tools/make_paper_tables.py path/to/unzipped_results paper_tables
+```
+
+---
+
+## Where each part of the paper comes from
+
+| Paper | Produced by | Result files |
+|---|---|---|
+| Fig. 3, lag-asymmetry test | `src/lag_test.py` | `results/lag_test/` |
+| Table II and Fig. 4, graph comparison | `src/graph_experiment.py`, `src/evaluate_stats.py` | `results/test2023/`, `test2024/`, `test2025/` (`*_overall.csv`) |
+| Table III, direction ablation | `src/evaluate_stats.py` | `results/test20XX/*_pairwise.csv` |
+| Table IV and Fig. 5, regime breakdown | `src/evaluate_stats.py` | `results/test20XX/*_regimes.csv`, `*_H3_conditional.csv` |
+| Table V, neural network and run time | `src/gnn_experiment.py`, `src/resources.py` | `results/gnn2025/`, `results/resources/` |
+| Figs. 1 and 2, block and flow diagrams | `diagrams/render_drawio.py` | `diagrams/pdf/` |
+
+---
+
+## Limitations
+
+- One city and three test years.
+- All stations fall inside four ERA5 grid cells, so the wind used is effectively the same across the city; station wind sensors were too unreliable to use.
+- Much of Delhi's pollution arrives from outside the city, which no graph built on city stations can see.
+
+---
+
+## Citation
+
+```bibtex
+@misc{kumar2026windgraphs,
+  title  = {Do Wind-Directed Graphs Add Information Beyond Station History? A Transport-Conditioned Evaluation on Delhi's Air-Quality Network},
+  author = {Kumar, Raushan and Sahoo, Priya and Saketh, Grandhi},
+  year   = {2026},
+  note   = {Department of Computer Science and Engineering, SRM University--AP},
+  url    = {https://github.com/raushan95a/wind-directed-graphs-delhi-aq}
+}
+```
