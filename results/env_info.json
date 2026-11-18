@@ -1,0 +1,6 @@
+{
+ "python": "3.13.16",
+ "torch": "2.14.1+cu130",
+ "xgboost": "3.4.1",
+ "gpu": "Tesla T4"
+}
