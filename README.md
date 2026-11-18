@@ -1,56 +1,131 @@
 # Do Wind-Directed Graphs Add Information Beyond Station History?
 
-Code and results for the paper *"Do Wind-Directed Graphs Add Information Beyond Station History? A Transport-Conditioned Evaluation on Delhi's Air-Quality Network"* by Raushan Kumar, Priya Sahoo and Grandhi Saketh (SRM University–AP).
+**A transport-conditioned evaluation on Delhi's air-quality monitoring network**
 
-The study asks when, if ever, a wind-directed station graph improves multi-station PM2.5 forecasts in Delhi. The learner is held fixed and only the graph changes. Wind graphs are compared with no graph, uniform, distance and correlation graphs, after a model-free test of whether a wind-transport signal exists between stations at all.
+Raushan Kumar, Priya Sahoo, Grandhi Saketh
+Department of Computer Science and Engineering, SRM University–AP, Amaravati, India
 
-## Run it
+---
 
-1. Open `notebook/delhi_windgraph_colab.ipynb` in Google Colab.
-2. Choose Runtime → Change runtime type → **T4 GPU**.
-3. Choose Runtime → **Run all**.
+## Overview
 
-The notebook installs its requirements, downloads the data, writes the scripts in `src/`, runs every step and downloads the results. No API keys are needed.
+Many recent air-quality forecasting models connect monitoring stations with graph edges that follow the wind, on the idea that pollution moves from upwind stations to downwind ones. This project tests whether that idea actually improves forecasts.
 
-## Structure
+We forecast hourly PM2.5 at 34 stations in Delhi and compare seven ways of building the station graph, keeping everything else fixed. Before training any model, we also check directly whether pollution moves between stations with the wind.
 
-```
-notebook/delhi_windgraph_colab.ipynb   full pipeline for Google Colab
-src/download_data.py      Delhi rows of the CPCB archive
-src/prepare_data.py       hourly PM2.5 panel, quality control, ERA5 wind and boundary-layer height
-src/lag_test.py           model-free upwind/downwind lag test
-src/graph_experiment.py   7 graph constructions x 5 horizons, fixed XGBoost learner
-src/evaluate_stats.py     MAE/RMSE/R2, Diebold-Mariano + Holm, week-block bootstrap, regime breakdowns
-src/gnn_experiment.py     Graph WaveNet-style robustness check
-src/resources.py          training curves, run time, GPU memory, inference latency
-tools/make_paper_tables.py  builds the paper's LaTeX tables and figures from the results
-diagrams/                 draw.io sources of the block and flow diagrams
-data/station_coords.csv   station latitude/longitude
-results/                  summary results of the reported run (CSV/JSON)
-```
+**Main findings**
 
-## Reported results (`results/`)
+1. Pollution does travel between Delhi stations with the wind, but only over one to three hours.
+2. Using information from neighbouring stations lowers short-range forecast error by 3–9%.
+3. Pointing the graph edges in the wind direction does not help: an ordinary distance-based graph does as well or better.
 
-From the Colab run reported in the paper (34 stations, 2019–2024; test years 2023 and 2024; Tesla T4, Python 3.13, PyTorch 2.14, XGBoost 3.4):
+---
 
-- **Transport test:** downwind flow raises the lagged correlation of hourly PM2.5 changes in 98.6% of 514 station pairs (Wilcoxon p < 1e-80). The effect peaks at a 1 h lag and fades by about 5 h.
-- **Graph vs. no graph:** neighbour information lowers MAE by 5–9% at 1–3 h in 2024 and 3–5% in 2023, with no gain at 12–24 h.
-- **Wind vs. distance:** the hourly wind graph is never significantly better than an undirected distance graph, and is 1.3–1.9% worse at 3–12 h in 2024.
-- **GNN check:** the same pattern holds, and the learned adaptive graph is best.
+## Quick start (Google Colab)
 
-`results/test*/xgb*_overall.csv` were produced by `src/evaluate_stats.py` from the Colab prediction files. `results/run_times/` holds training times parsed from the run logs.
+The whole study runs from one notebook. No uploads or API keys are needed.
+
+1. Open `notebook/delhi_windgraph_colab.ipynb` in [Google Colab](https://colab.research.google.com).
+2. Select **Runtime > Change runtime type > T4 GPU**.
+3. Select **Runtime > Run all**.
+
+The notebook installs the requirements, downloads the data, runs all experiments and downloads the results as a zip file. A full run takes a few hours on a free T4 GPU.
+
+---
+
+## Repository structure
+
+| Path | Contents |
+|---|---|
+| `notebook/delhi_windgraph_colab.ipynb` | Complete pipeline for Google Colab |
+| `src/download_data.py` | Downloads the Delhi rows of the CPCB monitoring archive |
+| `src/prepare_data.py` | Builds the hourly PM2.5 panel, applies quality control, fetches ERA5 weather data |
+| `src/lag_test.py` | Model-free test of wind-driven transport between stations |
+| `src/graph_experiment.py` | Main experiment: seven graph types, five forecast horizons, XGBoost |
+| `src/evaluate_stats.py` | Error metrics, significance tests and breakdowns by season, ventilation and transport |
+| `src/gnn_experiment.py` | Robustness check with a graph neural network |
+| `src/resources.py` | Training curves, run time and GPU memory measurements |
+| `tools/make_paper_tables.py` | Turns the results into the tables and figures of the paper |
+| `diagrams/` | draw.io source files of the block diagram and flow diagram |
+| `data/station_coords.csv` | Latitude and longitude of each station |
+| `results/` | Summary results of the run reported in the paper |
+| `requirements.txt` | Python packages |
+
+---
+
+## Method in brief
+
+**Data**
+- 34 Delhi monitoring stations, hourly PM2.5, 2019–2024.
+- Weather (wind and boundary-layer height) from ERA5, used only at the moment a forecast is made, so no future information enters the models.
+
+**Graph types compared**
+
+| Name | How stations are connected |
+|---|---|
+| No graph | Each station uses only its own history |
+| Uniform | Equal weight to all other stations |
+| Distance | Closer stations get more weight |
+| Correlation | The five stations most correlated in the training years |
+| Static wind | Edges follow the average wind of the training years |
+| Hourly wind | Edges follow the wind at the time of the forecast |
+| Ventilation-gated | Switches between wind and distance edges depending on how well the air is mixing |
+
+**Evaluation**
+- Forecast horizons: 1, 3, 6, 12 and 24 hours.
+- Two test years: each model is trained on earlier years, tuned on the year before the test year, and tested on the test year (2023 and 2024).
+- Metrics: mean absolute error (MAE), root-mean-square error (RMSE) and R².
+- Significance: Diebold–Mariano tests with Holm correction, and bootstrap confidence intervals.
+
+---
+
+## Results
+
+Results of the reported run are in `results/`. Experiments ran on a Tesla T4 GPU with Python 3.13, PyTorch 2.14 and XGBoost 3.4.
+
+| Question | Answer |
+|---|---|
+| Does pollution move between stations with the wind? | Yes. In 98.6% of 514 station pairs, changes travel downwind. The effect is strongest after 1 hour and gone after about 5 hours. |
+| Does using neighbouring stations help? | Yes, at short horizons: 5–9% lower MAE at 1–3 hours in 2024 and 3–5% in 2023. No gain at 12–24 hours. |
+| Does following the wind direction help? | No. The hourly wind graph is never better than the distance graph, and is 1.3–1.9% worse at 3–12 hours in 2024. |
+| Does a neural network change the picture? | No. The same pattern holds, and a graph learned from the data performs best. |
+
+**Files in `results/`**
+
+| File | Contents |
+|---|---|
+| `test2024/`, `test2023/` | Error metrics, significance tests and regime breakdowns for each test year |
+| `gnn2024/` | The same for the graph neural network |
+| `lag_test/` | Results of the wind-transport test |
+| `run_times/` | Training times for each model |
+| `stations.csv` | Stations used and their data completeness |
+| `env_info.json` | Hardware and software versions |
+
+---
 
 ## Data sources
 
-- **PM2.5:** Central Pollution Control Board monitoring data, via [Vonter/india-cpcb-aqi](https://github.com/Vonter/india-cpcb-aqi) (ODbL-1.0). Timestamps are treated as local time (IST).
-- **Meteorology:** ERA5 reanalysis, retrieved through the [Open-Meteo](https://open-meteo.com) historical API.
-- **Station coordinates:** XKDR air-quality station catalogue, as distributed in [sharifmdathar/delhi-ncr-pm25](https://github.com/sharifmdathar/delhi-ncr-pm25) (MIT).
+| Data | Source | Licence |
+|---|---|---|
+| PM2.5 measurements | Central Pollution Control Board, via the [Vonter/india-cpcb-aqi](https://github.com/Vonter/india-cpcb-aqi) archive | ODbL-1.0 |
+| Weather | ERA5 reanalysis, via the [Open-Meteo](https://open-meteo.com) historical API | CC-BY 4.0 |
+| Station coordinates | XKDR air-quality station catalogue, as distributed in [sharifmdathar/delhi-ncr-pm25](https://github.com/sharifmdathar/delhi-ncr-pm25) | MIT |
 
-Raw data are downloaded by the notebook and are not stored here.
+Raw data are downloaded by the notebook and are not stored in this repository. Timestamps in the CPCB archive are labelled UTC but are local time (IST); the code treats them as IST.
 
-## Setup
+---
 
-- **Splits:** rolling test years Y: train on 2019 to Y−2, validate on Y−1, test on Y. The notebook supports 2023–2025.
-- **Horizons:** 1, 3, 6, 12 and 24 h.
-- **No future weather:** meteorology is used only at the forecast origin.
-- **Common starting point:** every model predicts the change from the station's current value.
+## Running locally
+
+A CUDA GPU is recommended. With Python 3.10 or newer:
+
+```bash
+pip install -r requirements.txt
+python src/download_data.py data 2019 2020 2021 2022 2023 2024
+python src/prepare_data.py data data/station_coords.csv out/prep 2024
+python src/lag_test.py out/prep out/lag_deseason deseason
+python src/graph_experiment.py out/prep out/xgb_test2024 2024
+python src/evaluate_stats.py out/xgb_test2024/test_predictions.parquet out/xgb_test2024/met_origin.parquet out/prep/panel.npz out/stats_test2024 xgb2024
+```
+
+See the notebook for the remaining steps (second test year, GNN, resource measurements).
