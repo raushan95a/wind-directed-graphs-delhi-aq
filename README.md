@@ -56,7 +56,7 @@ The notebook installs the requirements, downloads the data, runs all experiments
 ## Method in brief
 
 **Data**
-- 34 Delhi monitoring stations, hourly PM2.5, 2019–2024.
+- 34 Delhi monitoring stations, hourly PM2.5, 2019–2025.
 - Weather (wind and boundary-layer height) from ERA5, used only at the moment a forecast is made, so no future information enters the models.
 
 **Graph types compared**
@@ -73,7 +73,7 @@ The notebook installs the requirements, downloads the data, runs all experiments
 
 **Evaluation**
 - Forecast horizons: 1, 3, 6, 12 and 24 hours.
-- Two test years: each model is trained on earlier years, tuned on the year before the test year, and tested on the test year (2023 and 2024).
+- Three test years: each model is trained on earlier years, tuned on the year before the test year, and tested on the test year (2023, 2024 and 2025).
 - Metrics: mean absolute error (MAE), root-mean-square error (RMSE) and R².
 - Significance: Diebold–Mariano tests with Holm correction, and bootstrap confidence intervals.
 
@@ -85,19 +85,20 @@ Results of the reported run are in `results/`. Experiments ran on a Tesla T4 GPU
 
 | Question | Answer |
 |---|---|
-| Does pollution move between stations with the wind? | Yes. In 98.6% of 514 station pairs, changes travel downwind. The effect is strongest after 1 hour and gone after about 5 hours. |
-| Does using neighbouring stations help? | Yes, at short horizons: 5–9% lower MAE at 1–3 hours in 2024 and 3–5% in 2023. No gain at 12–24 hours. |
-| Does following the wind direction help? | No. The hourly wind graph is never better than the distance graph, and is 1.3–1.9% worse at 3–12 hours in 2024. |
+| Does pollution move between stations with the wind? | Yes. In 98.4% of 514 station pairs, changes travel downwind. The effect is strongest after 1 hour and gone after about 5 hours. |
+| Does using neighbouring stations help? | Yes, at short horizons: 4–6% lower MAE at 1–3 hours in 2025, 5–9% in 2024 and 3–5% in 2023. No gain at 12–24 hours. |
+| Does following the wind direction help? | No. Across 15 year and horizon combinations, the hourly wind graph is significantly worse than the distance graph in 8 and better in only 1 (by 0.25%). |
 | Does a neural network change the picture? | No. The same pattern holds, and a graph learned from the data performs best. |
 
 **Files in `results/`**
 
 | File | Contents |
 |---|---|
-| `test2024/`, `test2023/` | Error metrics, significance tests and regime breakdowns for each test year |
-| `gnn2024/` | The same for the graph neural network |
+| `test2025/`, `test2024/`, `test2023/` | Error metrics, significance tests and regime breakdowns for each test year |
+| `gnn2025/`, `gnn2024/` | The same for the graph neural network |
+| `resources/` | Training curves, run time, GPU memory and inference time for each graph |
 | `lag_test/` | Results of the wind-transport test |
-| `run_times/` | Training times for each model |
+| `run_times/` | Training times taken from the run logs |
 | `stations.csv` | Stations used and their data completeness |
 | `env_info.json` | Hardware and software versions |
 
@@ -121,11 +122,11 @@ A CUDA GPU is recommended. With Python 3.10 or newer:
 
 ```bash
 pip install -r requirements.txt
-python src/download_data.py data 2019 2020 2021 2022 2023 2024
-python src/prepare_data.py data data/station_coords.csv out/prep 2024
+python src/download_data.py data 2019 2020 2021 2022 2023 2024 2025
+python src/prepare_data.py data data/station_coords.csv out/prep 2025
 python src/lag_test.py out/prep out/lag_deseason deseason
-python src/graph_experiment.py out/prep out/xgb_test2024 2024
-python src/evaluate_stats.py out/xgb_test2024/test_predictions.parquet out/xgb_test2024/met_origin.parquet out/prep/panel.npz out/stats_test2024 xgb2024
+python src/graph_experiment.py out/prep out/xgb_test2025 2025
+python src/evaluate_stats.py out/xgb_test2025/test_predictions.parquet out/xgb_test2025/met_origin.parquet out/prep/panel.npz out/stats_test2025 xgb2025
 ```
 
-See the notebook for the remaining steps (second test year, GNN, resource measurements).
+See the notebook for the remaining steps (other test years, GNN, resource measurements).
