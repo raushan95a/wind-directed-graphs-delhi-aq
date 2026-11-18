@@ -1,0 +1,8 @@
+data/*
+!data/station_coords.csv
+out/
+*.parquet
+*.npz
+*.zip
+__pycache__/
+.ipynb_checkpoints/
