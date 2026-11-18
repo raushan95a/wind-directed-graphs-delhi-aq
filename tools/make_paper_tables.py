@@ -1,14 +1,15 @@
 """Build the paper's results tables (LaTeX) and figures from the Colab outputs.
 
-Usage: python make_results.py <unzipped_results_dir> [<unzipped_resources_dir>]
-Writes: tables/*.tex, figures/fig_*.pdf, results_numbers.json (numbers quoted in the text).
+Usage: python tools/make_paper_tables.py <unzipped_results_dir> [<output_dir>]
+  <unzipped_results_dir>: the results.zip downloaded by the notebook, unzipped
+  <output_dir>: where to write tables/, figures/ and results_numbers.json (default: paper_tables/)
 """
 import sys, os, json
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
-R = sys.argv[1]; RES = sys.argv[2] if len(sys.argv) > 2 else None
-HERE = os.path.dirname(os.path.abspath(__file__))   # writes tables/ and figures/ next to this script
+R = sys.argv[1]; RES = None
+HERE = sys.argv[2] if len(sys.argv) > 2 else "paper_tables"
 os.makedirs(os.path.join(HERE, "tables"), exist_ok=True); os.makedirs(os.path.join(HERE, "figures"), exist_ok=True)
 plt.rcParams.update({"font.size": 7, "axes.titlesize": 7, "axes.labelsize": 7, "legend.fontsize": 6,
                      "xtick.labelsize": 6.5, "ytick.labelsize": 6.5, "font.family": "serif", "axes.linewidth": 0.6,
@@ -24,6 +25,7 @@ COL = {"G1_uniform": "#7f7f7f", "G2_distance": "#1f77b4", "G3_correlation": "#94
 nums = {}
 def p(*a): return os.path.join(R, *a)
 def save(fig, name): fig.savefig(os.path.join(HERE, "figures", name), bbox_inches="tight"); plt.close(fig)
+def sg(v): return "0.0" if abs(v) < 0.05 else f"{v:+.1f}"
 def star(pv): return "" if not np.isfinite(pv) else ("$^{*}$" if pv < 0.05 else "")
 
 import glob, re
@@ -66,7 +68,7 @@ if rows:
 
 # ---------------- Table: directional ablation (pairwise) ----------------
 pairs = [("G5_hourly_wind", "G2_distance", "Hourly wind vs.\\ distance"), ("G4_static_wind", "G2_distance", "Static wind vs.\\ distance"),
-         ("G5_hourly_wind", "G4_static_wind", "Hourly vs.\\ static wind"), ("G6_vent_gated", "G2_distance", "Vent.-gated vs.\\ distance"),
+         ("G6_vent_gated", "G2_distance", "Vent.-gated vs.\\ distance"),
          ]
 rows = []
 for y in YEARS:
@@ -77,7 +79,7 @@ for y in YEARS:
     for a, b, lab in pairs:
         r = Pw[(Pw.a == a) & (Pw.b == b)].sort_values("h")
         if r.empty: continue
-        rows.append(lab + " & " + " & ".join(f"{q.pct:+.1f}" + star(q.dm_p) for q in r.itertuples()) + r" \\")
+        rows.append(lab + " & " + " & ".join(sg(q.pct) + star(q.dm_p) for q in r.itertuples()) + r" \\")
     rows.append(r"\midrule")
 if rows:
     rows = rows[:-1]
@@ -107,7 +109,7 @@ if regs:
                 d = regs.get(y)
                 q = None if d is None else d[(d.h == H0) & (d.regime == reg) & (d.level == lev)]
                 if q is None or q.empty: cells += ["--", "--"]; continue
-                q = q.iloc[0]; cells += [f"{q.pct_G5_hourly_wind:+.1f}", f"{q.pct_G5_vs_G2:+.1f}"]
+                q = q.iloc[0]; cells += [sg(q.pct_G5_hourly_wind), sg(q.pct_G5_vs_G2)]
             rows.append(lab + " & " + " & ".join(cells) + r" \\")
         rows.append(r"\midrule")
     rows = rows[:-1]

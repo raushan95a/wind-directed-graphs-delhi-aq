@@ -6,3 +6,4 @@ out/
 *.zip
 __pycache__/
 .ipynb_checkpoints/
+paper_tables/
