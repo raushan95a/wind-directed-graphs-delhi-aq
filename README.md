@@ -46,7 +46,7 @@ The notebook installs the requirements, downloads the data, runs all experiments
 | `src/gnn_experiment.py` | Robustness check with a graph neural network |
 | `src/resources.py` | Training curves, run time and GPU memory measurements |
 | `tools/make_paper_tables.py` | Turns the results into the tables and figures of the paper |
-| `diagrams/` | draw.io source files of the block diagram and flow diagram |
+| `diagrams/` | draw.io source files of the block diagram and flow diagram, their PDF versions (`pdf/`) and the scripts that create them |
 | `data/station_coords.csv` | Latitude and longitude of each station |
 | `results/` | Summary results of the run reported in the paper |
 | `requirements.txt` | Python packages |
